@@ -15,8 +15,20 @@ const transporter = nodemailer.createTransport({
 
 // Helper to determine the production or local app URL
 function getAppUrl(): string {
-  const url = process.env.APP_URL || process.env.CLIENT_URL || 'https://lisdt.vercel.app'
-  return url.replace(/\/+$/, '')
+  // 1. Explicitly configured APP_URL takes top priority
+  if (process.env.APP_URL) {
+    return process.env.APP_URL.replace(/\/+$/, '')
+  }
+  // 2. In local development, default to localhost
+  if (process.env.NODE_ENV === 'development') {
+    return 'http://localhost:5173'
+  }
+  // 3. Otherwise use CLIENT_URL if it is not localhost
+  if (process.env.CLIENT_URL && !process.env.CLIENT_URL.includes('localhost')) {
+    return process.env.CLIENT_URL.replace(/\/+$/, '')
+  }
+  // 4. Production fallback to live hosted frontend
+  return 'https://lisdt.vercel.app'
 }
 
 // Helper to locate logo file safely across local dev & production hosting environments

@@ -43,6 +43,22 @@ app.use(
 )
 app.use(express.json())
 
+// Explicit preflight OPTIONS handler and CORS headers
+app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const origin = req.headers.origin
+  if (origin) {
+    res.setHeader('Access-Control-Allow-Origin', origin)
+    res.setHeader('Access-Control-Allow-Credentials', 'true')
+    res.setHeader('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS')
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept')
+  }
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(204)
+    return
+  }
+  next()
+})
+
 // HTTP Cache-Control headers for API responses
 app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
   if (req.method === 'GET') {

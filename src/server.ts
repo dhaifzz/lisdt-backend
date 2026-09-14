@@ -71,20 +71,27 @@ app.use((req: express.Request, res: express.Response, next: express.NextFunction
   next()
 })
 
-// Health check
-app.get('/api/health', (_req: express.Request, res: express.Response) => {
+// Health check (supports /api/health and /health)
+const healthHandler = (_req: express.Request, res: express.Response) => {
   res.setHeader('Cache-Control', 'public, max-age=15, stale-while-revalidate=30')
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),
     service: 'lisdt-backend',
   })
-})
+}
+app.get('/api/health', healthHandler)
+app.get('/health', healthHandler)
 
-// Routes
+// Routes (supports both /api/auth and /auth, etc.)
 app.use('/api/auth', authRoutes)
+app.use('/auth', authRoutes)
+
 app.use('/api/categories', categoryRoutes)
+app.use('/categories', categoryRoutes)
+
 app.use('/api/media', mediaRoutes)
+app.use('/media', mediaRoutes)
 
 // 404 Handler
 app.use((_req: express.Request, res: express.Response) => {

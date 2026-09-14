@@ -74,8 +74,23 @@ export async function uploadCoverImage(
   const localFilePath = path.join(LOCAL_UPLOADS_DIR, uniqueName)
   await fs.promises.writeFile(localFilePath, buffer)
 
-  const serverBase = process.env.SERVER_URL || `http://localhost:${process.env.PORT || 5000}`
-  const localUrl = `${serverBase}/uploads/covers/${uniqueName}`
-  console.log('[StorageService] Saved locally to:', localUrl)
+  const isProduction = process.env.NODE_ENV === 'production'
+  const serverBase = process.env.SERVER_URL?.replace(/\/+$/, '')
+
+  if (serverBase) {
+    const publicUrl = `${serverBase}/uploads/covers/${uniqueName}`
+    console.log('[StorageService] Saved locally to SERVER_URL:', publicUrl)
+    return publicUrl
+  }
+
+  if (isProduction) {
+    console.error('[StorageService] CRITICAL: Supabase upload failed/unconfigured, and SERVER_URL is not set in production!')
+    throw new Error(
+      'Image upload failed: Supabase Storage is not configured on the production server (missing SUPABASE_SERVICE_ROLE_KEY). Please configure Supabase environment variables.'
+    )
+  }
+
+  const localUrl = `http://localhost:${process.env.PORT || 5000}/uploads/covers/${uniqueName}`
+  console.log('[StorageService] Saved locally to dev server:', localUrl)
   return localUrl
 }

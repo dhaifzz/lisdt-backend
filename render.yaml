@@ -24,3 +24,11 @@ services:
         sync: false
       - key: GMAIL_APP_PASSWORD
         sync: false
+      - key: SUPABASE_URL
+        value: https://zhsrrwmcakmepikkbwok.supabase.co
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_STORAGE_BUCKET
+        value: covers
+      - key: SERVER_URL
+        value: https://lisdt.onrender.com

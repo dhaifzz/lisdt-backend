@@ -2,11 +2,18 @@ import express from 'express'
 import cors from 'cors'
 import dotenv from 'dotenv'
 
+import path from 'path'
+import { fileURLToPath } from 'url'
+
 import authRoutes from './routes/auth.routes.js'
 import categoryRoutes from './routes/category.routes.js'
 import mediaRoutes from './routes/media.routes.js'
+import uploadRoutes from './routes/upload.routes.js'
 
 dotenv.config()
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 const app = express()
 const PORT = process.env.PORT || 5000
@@ -93,6 +100,14 @@ app.use('/categories', categoryRoutes)
 app.use('/api/media', mediaRoutes)
 app.use('/media', mediaRoutes)
 
+// Upload routes (Supabase Storage with local fallback)
+app.use('/api/upload', uploadRoutes)
+app.use('/upload', uploadRoutes)
+
+// Serve local fallback uploads statically
+app.use('/uploads', express.static(path.resolve(__dirname, '../../uploads')))
+app.use('/uploads', express.static(path.resolve(__dirname, '../uploads')))
+
 // 404 Handler
 app.use((_req: express.Request, res: express.Response) => {
   res.status(404).json({ error: 'Route not found' })
@@ -108,3 +123,4 @@ app.listen(Number(PORT), '0.0.0.0', () => {
   console.log(` Lisdt backend running on http://0.0.0.0:${PORT}`)
   console.log(` Health check: http://0.0.0.0:${PORT}/api/health`)
 })
+

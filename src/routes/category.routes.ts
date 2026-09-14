@@ -6,14 +6,34 @@ import { authenticateToken, AuthRequest } from '../middleware/auth.js'
 const router = Router()
 
 const CategorySchema = z.object({
-  slug: z.string().min(1).max(50),
-  label: z.string().min(1).max(100),
-  tag: z.string().min(1).max(50),
-  headline: z.string().default('Your collection'),
-  subhead: z.string().default('media diary.'),
-  description: z.string().default(''),
+  slug: z.string().trim().min(1, 'Slug is required').max(50, 'Slug must not exceed 50 characters'),
+  label: z
+    .string()
+    .trim()
+    .min(2, 'Library title must be at least 2 characters')
+    .max(30, 'Library title must not exceed 30 characters'),
+  tag: z
+    .string()
+    .trim()
+    .min(1, 'Tag is required')
+    .max(20, 'Tag must not exceed 20 characters'),
+  headline: z
+    .string()
+    .trim()
+    .max(40, 'Headline must not exceed 40 characters')
+    .default('Your collection'),
+  subhead: z
+    .string()
+    .trim()
+    .max(40, 'Subhead must not exceed 40 characters')
+    .default('media diary.'),
+  description: z
+    .string()
+    .trim()
+    .max(160, 'Description must not exceed 160 characters')
+    .default(''),
   type: z.enum(['series', 'movies']),
-  unitLabel: z.string().optional(),
+  unitLabel: z.string().max(20).optional(),
 })
 
 // All category routes require authentication

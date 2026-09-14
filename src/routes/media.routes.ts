@@ -6,17 +6,21 @@ import { authenticateToken, AuthRequest } from '../middleware/auth.js'
 const router = Router()
 
 const MediaSchema = z.object({
-  category: z.string().min(1),
-  title: z.string().min(1),
+  category: z.string().trim().min(1, 'Category is required'),
+  title: z
+    .string()
+    .trim()
+    .min(1, 'Title is required')
+    .max(80, 'Title must not exceed 80 characters'),
   year: z.number().int().min(1900).max(2100),
   rating: z.number().min(1).max(10).transform(v => Math.round(v)).nullable().optional(),
   status: z.enum(['watching', 'watched', 'stalled', 'dropped']).default('watching'),
-  studio: z.string().optional(),
+  studio: z.string().max(80, 'Studio must not exceed 80 characters').optional(),
   cover: z.string().default('').transform(v => v.includes('photo-1578632767115-351597cf2477') ? '' : v.trim()),
   seasonsFinished: z.number().int().min(0).default(0),
   parts: z.number().int().min(0).optional().nullable(),
   moviesCount: z.number().int().min(0).optional().nullable(),
-  notes: z.string().optional().nullable(),
+  notes: z.string().max(1000, 'Notes must not exceed 1000 characters').optional().nullable(),
   topRank: z.number().int().min(1).max(10).nullable().optional(),
 })
 

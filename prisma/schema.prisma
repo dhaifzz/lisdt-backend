@@ -1,0 +1,69 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id                Int          @id @default(autoincrement())
+  username          String       @unique
+  email             String       @unique
+  passwordHash      String
+  avatar            String?
+  emailVerified     Boolean      @default(false)
+  verifyToken       String?      @unique
+  verifyTokenExpiry DateTime?
+  resetToken        String?      @unique
+  resetTokenExpiry  DateTime?
+  categories        Category[]
+  mediaItems        MediaItem[]
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+
+  @@map("users")
+}
+
+model Category {
+  id          String   @id @default(cuid())
+  slug        String   // e.g. "anime", "movies", "live_action"
+  label       String   // e.g. "ANIME SERIES"
+  tag         String   // e.g. "ANIME_TV"
+  headline    String
+  subhead     String
+  description String
+  type        String   // "series" | "movies"
+  unitLabel   String?  // "SEASONS" | "PARTS"
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([userId, slug])
+  @@map("categories")
+}
+
+model MediaItem {
+  id              Int      @id @default(autoincrement())
+  category        String   // matches Category slug or id
+  title           String
+  year            Int
+  rating          Float?
+  status          String   @default("watching") // "watching" | "watched" | "stalled" | "dropped"
+  studio          String?
+  cover           String
+  seasonsFinished Int      @default(0)
+  parts           Int?
+  moviesCount     Int?
+  notes           String?
+  topRank         Int?
+  userId          Int
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@map("media_items")
+}

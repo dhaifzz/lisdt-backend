@@ -15,10 +15,27 @@ const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173'
 // Enable ETags for client conditional caching (304 Not Modified)
 app.set('etag', 'strong')
 
+const allowedOrigins = [
+  CLIENT_URL,
+  'https://lisdt.vercel.app',
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+]
+
 // Middlewares
 app.use(
   cors({
-    origin: [CLIENT_URL, 'http://localhost:5173', 'http://127.0.0.1:5173'],
+    origin: (origin, callback) => {
+      // Allow requests with no origin (curl, mobile, health checks, server-to-server)
+      if (!origin) return callback(null, true)
+      if (
+        allowedOrigins.includes(origin) ||
+        origin.endsWith('.vercel.app')
+      ) {
+        return callback(null, true)
+      }
+      return callback(null, true)
+    },
     credentials: true,
   })
 )
@@ -62,7 +79,7 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
   res.status(500).json({ error: 'Internal server error' })
 })
 
-app.listen(PORT, () => {
-  console.log(` Lisdt backend running on http://localhost:${PORT}`)
-  console.log(` Health check: http://localhost:${PORT}/api/health`)
+app.listen(Number(PORT), '0.0.0.0', () => {
+  console.log(` Lisdt backend running on http://0.0.0.0:${PORT}`)
+  console.log(` Health check: http://0.0.0.0:${PORT}/api/health`)
 })

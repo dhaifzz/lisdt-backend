@@ -1,6 +1,7 @@
-import nodemailer from 'nodemailer'
+import nodemailer, { type SendMailOptions } from 'nodemailer'
 import dotenv from 'dotenv'
 import path from 'path'
+import fs from 'fs'
 
 dotenv.config()
 
@@ -12,12 +13,46 @@ const transporter = nodemailer.createTransport({
   },
 })
 
+// Helper to determine the production or local app URL
+function getAppUrl(): string {
+  const url = process.env.APP_URL || process.env.CLIENT_URL || 'https://lisdt.vercel.app'
+  return url.replace(/\/+$/, '')
+}
+
+// Helper to locate logo file safely across local dev & production hosting environments
+function getLogoAttachment(): { attachments?: SendMailOptions['attachments']; logoImgSrc: string } {
+  const possiblePaths = [
+    path.resolve(process.cwd(), 'src/assets/Lisdt.png'),
+    path.resolve(process.cwd(), 'dist/assets/Lisdt.png'),
+    path.resolve(process.cwd(), '../frontend/src/assets/Lisdt.png'),
+  ]
+
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      return {
+        attachments: [
+          {
+            filename: 'Lisdt.png',
+            path: p,
+            cid: 'lisdt-logo',
+          },
+        ],
+        logoImgSrc: 'cid:lisdt-logo',
+      }
+    }
+  }
+
+  // Fallback to hosted vector logo if local file is not found
+  return {
+    attachments: [],
+    logoImgSrc: 'https://lisdt.vercel.app/favicon.svg',
+  }
+}
+
 export async function sendVerificationEmail(to: string, token: string): Promise<void> {
-  const appUrl = process.env.APP_URL || 'http://localhost:5173'
+  const appUrl = getAppUrl()
   const verifyLink = `${appUrl}/verify-email?token=${token}`
-  
-  // Use path.resolve to find the logo in the frontend folder relative to the backend running directory
-  const logoPath = path.resolve(process.cwd(), '../frontend/src/assets/Lisdt.png')
+  const { attachments, logoImgSrc } = getLogoAttachment()
 
   const mailOptions = {
     from: `"Lisdt" <${process.env.GMAIL_USER}>`,
@@ -28,7 +63,7 @@ export async function sendVerificationEmail(to: string, token: string): Promise<
         
         <!-- Header with Logo -->
         <div style="text-align: center; margin-bottom: 30px;">
-          <img src="cid:lisdt-logo" alt="Lisdt Logo" style="width: 80px; height: 80px; margin-bottom: 15px; filter: drop-shadow(0 0 10px rgba(255,255,255,0.1));" />
+          <img src="${logoImgSrc}" alt="Lisdt Logo" style="width: 80px; height: 80px; margin-bottom: 15px; filter: drop-shadow(0 0 10px rgba(255,255,255,0.1));" />
           <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: bold; letter-spacing: 2px; text-transform: uppercase;">Lisdt</h1>
           <p style="color: #52525b; font-size: 12px; margin-top: 5px; letter-spacing: 1px;">// SECURE GATE</p>
         </div>
@@ -59,23 +94,16 @@ export async function sendVerificationEmail(to: string, token: string): Promise<
         </p>
       </div>
     `,
-    attachments: [
-      {
-        filename: 'Lisdt.png',
-        path: logoPath,
-        cid: 'lisdt-logo', // same cid value as in the html img src
-      }
-    ]
+    attachments,
   }
 
   await transporter.sendMail(mailOptions)
 }
 
 export async function sendPasswordResetEmail(to: string, token: string): Promise<void> {
-  const appUrl = process.env.APP_URL || 'http://localhost:5173'
+  const appUrl = getAppUrl()
   const resetLink = `${appUrl}/reset-password?token=${token}`
-  
-  const logoPath = path.resolve(process.cwd(), '../frontend/src/assets/Lisdt.png')
+  const { attachments, logoImgSrc } = getLogoAttachment()
 
   const mailOptions = {
     from: `"Lisdt" <${process.env.GMAIL_USER}>`,
@@ -86,7 +114,7 @@ export async function sendPasswordResetEmail(to: string, token: string): Promise
         
         <!-- Header with Logo -->
         <div style="text-align: center; margin-bottom: 30px;">
-          <img src="cid:lisdt-logo" alt="Lisdt Logo" style="width: 80px; height: 80px; margin-bottom: 15px; filter: drop-shadow(0 0 10px rgba(255,255,255,0.1));" />
+          <img src="${logoImgSrc}" alt="Lisdt Logo" style="width: 80px; height: 80px; margin-bottom: 15px; filter: drop-shadow(0 0 10px rgba(255,255,255,0.1));" />
           <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: bold; letter-spacing: 2px; text-transform: uppercase;">Lisdt</h1>
           <p style="color: #52525b; font-size: 12px; margin-top: 5px; letter-spacing: 1px;">PASSWORD RECOVERY</p>
         </div>
@@ -121,13 +149,7 @@ export async function sendPasswordResetEmail(to: string, token: string): Promise
         </p>
       </div>
     `,
-    attachments: [
-      {
-        filename: 'Lisdt.png',
-        path: logoPath,
-        cid: 'lisdt-logo',
-      }
-    ]
+    attachments,
   }
 
   await transporter.sendMail(mailOptions)

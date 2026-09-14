@@ -25,7 +25,7 @@ const allowedOrigins = [
 // Middlewares
 app.use(
   cors({
-    origin: (origin, callback) => {
+    origin: (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
       // Allow requests with no origin (curl, mobile, health checks, server-to-server)
       if (!origin) return callback(null, true)
       if (
@@ -42,7 +42,7 @@ app.use(
 app.use(express.json())
 
 // HTTP Cache-Control headers for API responses
-app.use((req, res, next) => {
+app.use((req: express.Request, res: express.Response, next: express.NextFunction) => {
   if (req.method === 'GET') {
     // Allows client/browser to cache and validate efficiently using ETags
     res.setHeader('Cache-Control', 'private, no-cache')
@@ -54,7 +54,7 @@ app.use((req, res, next) => {
 })
 
 // Health check
-app.get('/api/health', (_req, res) => {
+app.get('/api/health', (_req: express.Request, res: express.Response) => {
   res.setHeader('Cache-Control', 'public, max-age=15, stale-while-revalidate=30')
   res.json({
     status: 'ok',
@@ -69,7 +69,7 @@ app.use('/api/categories', categoryRoutes)
 app.use('/api/media', mediaRoutes)
 
 // 404 Handler
-app.use((_req, res) => {
+app.use((_req: express.Request, res: express.Response) => {
   res.status(404).json({ error: 'Route not found' })
 })
 

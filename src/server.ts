@@ -12,6 +12,9 @@ const app = express()
 const PORT = process.env.PORT || 5000
 const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173'
 
+// Enable ETags for client conditional caching (304 Not Modified)
+app.set('etag', 'strong')
+
 // Middlewares
 app.use(
   cors({
@@ -21,8 +24,21 @@ app.use(
 )
 app.use(express.json())
 
+// HTTP Cache-Control headers for API responses
+app.use((req, res, next) => {
+  if (req.method === 'GET') {
+    // Allows client/browser to cache and validate efficiently using ETags
+    res.setHeader('Cache-Control', 'private, no-cache')
+  } else {
+    // Mutations must never be cached
+    res.setHeader('Cache-Control', 'no-store')
+  }
+  next()
+})
+
 // Health check
 app.get('/api/health', (_req, res) => {
+  res.setHeader('Cache-Control', 'public, max-age=15, stale-while-revalidate=30')
   res.json({
     status: 'ok',
     timestamp: new Date().toISOString(),

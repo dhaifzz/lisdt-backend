@@ -94,3 +94,59 @@ export async function uploadCoverImage(
   console.log('[StorageService] Saved locally to dev server:', localUrl)
   return localUrl
 }
+
+/**
+ * Delete a cover image from Supabase Storage or local disk storage.
+ * Only deletes self-hosted images (Supabase or /uploads/), safely ignoring external URLs.
+ */
+export async function deleteCoverImage(coverUrl?: string | null): Promise<boolean> {
+  if (!coverUrl || typeof coverUrl !== 'string') return false
+
+  const isSupabaseUrl = coverUrl.includes('.supabase.co') && coverUrl.includes(`/${STORAGE_BUCKET}/`)
+  const isLocalUrl = coverUrl.includes('/uploads/covers/')
+
+  if (!isSupabaseUrl && !isLocalUrl) {
+    // External URL (e.g. MAL, AniList, TMDB) - nothing to delete from our storage
+    return false
+  }
+
+  try {
+    // 1. Delete from Supabase Storage
+    if (isSupabaseUrl) {
+      const parts = coverUrl.split(`/${STORAGE_BUCKET}/`)
+      if (parts.length > 1) {
+        const filePath = decodeURIComponent(parts[1].split('?')[0])
+        if (filePath && supabase) {
+          const { error } = await supabase.storage
+            .from(STORAGE_BUCKET)
+            .remove([filePath])
+
+          if (error) {
+            console.error(`[StorageService] Failed to delete Supabase file "${filePath}":`, error.message)
+            return false
+          }
+          console.log(`[StorageService] Successfully deleted previous file from Supabase Storage:`, filePath)
+          return true
+        }
+      }
+    }
+
+    // 2. Delete from Local Fallback Storage
+    if (isLocalUrl) {
+      const parts = coverUrl.split('/uploads/covers/')
+      if (parts.length > 1) {
+        const filename = decodeURIComponent(parts[1].split('?')[0])
+        const diskPath = path.join(LOCAL_UPLOADS_DIR, path.basename(filename))
+        if (fs.existsSync(diskPath)) {
+          await fs.promises.unlink(diskPath)
+          console.log(`[StorageService] Successfully deleted previous local file:`, diskPath)
+          return true
+        }
+      }
+    }
+  } catch (err) {
+    console.error(`[StorageService] Exception while deleting cover "${coverUrl}":`, err)
+  }
+
+  return false
+}

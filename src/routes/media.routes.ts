@@ -2,6 +2,7 @@ import { Router, Response } from 'express'
 import { z } from 'zod'
 import prisma from '../config/prisma.js'
 import { authenticateToken, AuthRequest } from '../middleware/auth.js'
+import { deleteCoverImage } from '../services/storage.service.js'
 
 const router = Router()
 
@@ -177,6 +178,15 @@ router.put('/:id', async (req: AuthRequest, res: Response): Promise<void> => {
       })
     }
 
+    // If cover is changing or being cleared, delete previous cover from storage to save space
+    if (
+      parseResult.data.cover !== undefined &&
+      existing.cover &&
+      existing.cover !== parseResult.data.cover
+    ) {
+      await deleteCoverImage(existing.cover)
+    }
+
     const item = await prisma.mediaItem.update({
       where: { id },
       data: parseResult.data,
@@ -240,6 +250,10 @@ router.delete('/:id', async (req: AuthRequest, res: Response): Promise<void> => 
     if (!existing) {
       res.status(404).json({ error: 'Media item not found' })
       return
+    }
+
+    if (existing.cover) {
+      await deleteCoverImage(existing.cover)
     }
 
     await prisma.mediaItem.delete({

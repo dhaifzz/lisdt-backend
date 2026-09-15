@@ -18,7 +18,7 @@ const MediaSchema = z.object({
   status: z.enum(['watching', 'watched', 'stalled', 'dropped']).default('watching'),
   studio: z.string().max(80, 'Studio must not exceed 80 characters').optional(),
   cover: z.string().default('').transform(v => v.includes('photo-1578632767115-351597cf2477') ? '' : v.trim()),
-  seasonsFinished: z.number().int().min(0).default(0),
+  seasonsFinished: z.number().min(0).default(0),
   parts: z.number().int().min(0).optional().nullable(),
   moviesCount: z.number().int().min(0).optional().nullable(),
   notes: z.string().max(1000, 'Notes must not exceed 1000 characters').optional().nullable(),

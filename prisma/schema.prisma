@@ -55,7 +55,7 @@ model MediaItem {
   status          String   @default("watching") // "watching" | "watched" | "stalled" | "dropped"
   studio          String?
   cover           String
-  seasonsFinished Int      @default(0)
+  seasonsFinished Float    @default(0)
   parts           Int?
   moviesCount     Int?
   notes           String?

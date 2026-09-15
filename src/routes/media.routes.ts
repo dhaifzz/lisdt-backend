@@ -12,7 +12,7 @@ const MediaSchema = z.object({
     .string()
     .trim()
     .min(1, 'Title is required')
-    .max(80, 'Title must not exceed 80 characters'),
+    .max(200, 'Title must not exceed 200 characters'),
   year: z.number().int().min(1900).max(2100),
   rating: z.number().min(1).max(10).transform(v => Math.round(v)).nullable().optional(),
   status: z.enum(['watching', 'watched', 'stalled', 'dropped']).default('watching'),

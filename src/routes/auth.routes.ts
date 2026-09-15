@@ -145,12 +145,10 @@ router.post('/register', registerLimiter, async (req: Request, res: Response): P
       return newUser
     })
 
-    try {
-      await sendVerificationEmail(email, verifyToken)
-    } catch (emailError) {
-      console.error('Failed to send verification email:', emailError)
-      // We don't fail the registration if email fails, but we might want to log it
-    }
+    // Dispatch verification email in background without blocking the HTTP response
+    sendVerificationEmail(email, verifyToken).catch((emailError) => {
+      console.error('Failed to send verification email in background:', emailError)
+    })
 
     res.status(201).json({
       message: 'VERIFY_EMAIL_SENT',
@@ -438,13 +436,18 @@ router.get('/me', authenticateToken, async (req: AuthRequest, res: Response): Pr
 const AvatarSchema = z.object({
   avatar: z
     .string()
-    .regex(
-      /^data:image\/(png|jpeg|gif);base64,/,
-      'Only PNG, JPEG, or GIF images are allowed'
+    .refine(
+      (val) =>
+        val === '' ||
+        val.startsWith('http://') ||
+        val.startsWith('https://') ||
+        val.startsWith('/uploads/') ||
+        /^data:image\/(png|jpeg|jpg|webp|gif|avif);base64,/.test(val),
+      'Only PNG, JPEG, WEBP, GIF images or valid image URLs are allowed'
     ),
 })
 
-const MAX_AVATAR_BYTES = 3 * 1024 * 1024 // 3 MB
+const MAX_AVATAR_BYTES = 5 * 1024 * 1024 // 5 MB
 
 router.put('/avatar', authenticateToken, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
@@ -456,12 +459,14 @@ router.put('/avatar', authenticateToken, async (req: AuthRequest, res: Response)
 
     const { avatar } = parseResult.data
 
-    // Estimate decoded byte size from base64 string length
-    const base64Data = avatar.split(',')[1] ?? ''
-    const byteSize = Math.ceil((base64Data.length * 3) / 4)
-    if (byteSize > MAX_AVATAR_BYTES) {
-      res.status(413).json({ error: 'Image must be 3 MB or smaller' })
-      return
+    // If base64, check size
+    if (avatar.startsWith('data:')) {
+      const base64Data = avatar.split(',')[1] ?? ''
+      const byteSize = Math.ceil((base64Data.length * 3) / 4)
+      if (byteSize > MAX_AVATAR_BYTES) {
+        res.status(413).json({ error: 'Image must be 5 MB or smaller' })
+        return
+      }
     }
 
     const user = await prisma.user.update({

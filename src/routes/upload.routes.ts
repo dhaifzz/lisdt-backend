@@ -1,5 +1,6 @@
 import { Router, Response } from 'express'
 import multer from 'multer'
+import prisma from '../config/prisma.js'
 import { authenticateToken, AuthRequest } from '../middleware/auth.js'
 import { uploadCoverImage, deleteCoverImage } from '../services/storage.service.js'
 
@@ -91,6 +92,66 @@ router.post('/delete', async (req: AuthRequest, res: Response): Promise<void> =>
     console.error('[UploadRoute] Error deleting image:', err)
     res.status(500).json({ error: 'Failed to delete image' })
   }
+})
+
+/**
+ * POST /api/upload/avatar
+ * Uploads and updates the current user's profile avatar
+ */
+router.post('/avatar', (req: AuthRequest, res: Response): void => {
+  upload.single('image')(req, res, async (err: any) => {
+    if (err instanceof multer.MulterError) {
+      if (err.code === 'LIMIT_FILE_SIZE') {
+        res.status(400).json({ error: 'Avatar must be 5MB or smaller' })
+        return
+      }
+      res.status(400).json({ error: `Upload error: ${err.message}` })
+      return
+    } else if (err) {
+      res.status(400).json({ error: err.message || 'File upload failed' })
+      return
+    }
+
+    if (!req.file) {
+      res.status(400).json({ error: 'No avatar image file provided' })
+      return
+    }
+
+    try {
+      // Find current user to delete previous custom avatar if any
+      const currentUser = await prisma.user.findUnique({
+        where: { id: req.user!.userId },
+        select: { avatar: true },
+      })
+
+      if (currentUser?.avatar) {
+        await deleteCoverImage(currentUser.avatar).catch(() => {})
+      }
+
+      // Upload new avatar image
+      const publicUrl = await uploadCoverImage(
+        req.file.buffer,
+        `avatar_${req.user!.userId}_${req.file.originalname}`,
+        req.file.mimetype
+      )
+
+      // Update user in database
+      const updatedUser = await prisma.user.update({
+        where: { id: req.user!.userId },
+        data: { avatar: publicUrl },
+        select: { id: true, username: true, email: true, avatar: true },
+      })
+
+      res.status(200).json({
+        url: publicUrl,
+        user: updatedUser,
+        message: 'Avatar updated successfully',
+      })
+    } catch (uploadError: any) {
+      console.error('[UploadRoute] Error processing avatar upload:', uploadError)
+      res.status(500).json({ error: 'Failed to process and store avatar' })
+    }
+  })
 })
 
 export default router
